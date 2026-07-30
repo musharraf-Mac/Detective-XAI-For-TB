@@ -85,7 +85,7 @@ Academic project — Horizon Campus, IT41043. Not licensed for commercial use.
 
 ---
 
-## 🙏 Acknowledgements
+## Acknowledgements
 
 - TorchXRayVision (Cohen et al., 2022) for pre-trained CXR models
 - TBX11K dataset for radiologist-annotated TB lesion bounding boxes
