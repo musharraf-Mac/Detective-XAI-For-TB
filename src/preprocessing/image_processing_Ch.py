@@ -72,22 +72,6 @@ for i, ax in enumerate(axes.flat):
     ax.set_title(f"Label: {row['label']} | Age: {row['age']} | Sex: {row['sex']}")
     ax.axis('off')
     
-plt.tight_layout()
-plt.show()
-
-sample_img = cv2.imread(df.iloc[0]['filepath'])
-print(f"Image shape: {sample_img.shape}")
-print(f"Image dtype: {sample_img.dtype}")
-print(f"Min/Max pixel values: {sample_img.min()} / {sample_img.max()}")
-
-# Check if all images are the same size (they usually aren't in Shenzhen - that's expected)
-sizes = []
-for fp in df['filepath'].head(20):
-    img = cv2.imread(fp)
-    if img is not None:
-        sizes.append(img.shape[:2])
-print(f"\nSample of image sizes: {set(sizes)}")
-
 output_path = os.path.join(PROCESSED_DIR, "ch_metadata.csv")
 df.to_csv(output_path, index=False)
 print(f"Saved {len(df)} records to {output_path}")
