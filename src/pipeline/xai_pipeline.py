@@ -2,20 +2,27 @@
 Main XAI pipeline controller.
 """
 
+from src.explainability.save_results import create_result_directory
+
 
 class XAIPipeline:
 
     def __init__(self, model):
+
         self.model = model
+        self.output_dir = create_result_directory()
 
 
     def explain(self, image):
 
         """
-        Runs Grad-CAM explanation.
+        Complete explanation workflow.
 
-        Model connection will be added
-        after trained model integration.
+        Model integration will be added later.
         """
 
-        pass
+        print(
+            "Grad-CAM pipeline ready"
+        )
+
+        return None
