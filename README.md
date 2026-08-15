@@ -72,8 +72,8 @@ pip install -r requirements.txt
 - [x] Research gap and question finalised (Milestone 1)
 - [x] Dataset sourcing plan finalised
 - [x] System architecture designed
-- [ ] Data collection and preprocessing (in progress)
-- [ ] Model training
+- [x] Data collection and preprocessing (in progress)
+- [x] Model training
 - [ ] XAI implementation and validation
 - [ ] Final results and paper (Milestone 3–4)
 
