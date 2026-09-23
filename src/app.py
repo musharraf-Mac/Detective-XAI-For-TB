@@ -4,29 +4,41 @@ import torch.nn as nn
 from torchvision import models, transforms
 from PIL import Image
 import numpy as np
+import os
+from dotenv import load_dotenv
+from huggingface_hub import hf_hub_download
+
+# Load environment variables
+load_dotenv()
 
 # --- Configuration ---
-MODEL_PATH = "models/baseline_densenet121_shenzhen.pth"
+HF_REPO_ID = os.getenv("HF_REPO_ID", "musharraf-mac2/TB_detector_by_MSH_V1")
+HF_FILENAME = os.getenv("HF_FILENAME", "baseline_densenet121_shenzhen.pth")
+HF_TOKEN = os.getenv("HF_TOKEN")
 CLASS_NAMES = ["Normal", "TB Positive"]
 
 # --- Model Setup ---
 @st.cache_resource
 def load_model():
-    """Loads the DenseNet121 model with the modified classifier."""
+    """Loads the DenseNet121 model with the modified classifier from Hugging Face."""
     # Instantiate the standard DenseNet121 architecture
     model = models.densenet121(weights=None)
 
     # Modify the classifier to output 2 classes (Normal vs TB)
-    # The original DenseNet121 has a classifier: Linear(in_features=1024, out_features=1000)
     num_ftrs = model.classifier.in_features
     model.classifier = nn.Linear(num_ftrs, 2)
 
-    # Load the saved weights
+    # Download and load the saved weights from HF
     try:
-        state_dict = torch.load(MODEL_PATH, map_location=torch.device('cpu'))
+        model_path = hf_hub_download(
+            repo_id=HF_REPO_ID,
+            filename=HF_FILENAME,
+            token=HF_TOKEN
+        )
+        state_dict = torch.load(model_path, map_location=torch.device('cpu'))
         model.load_state_dict(state_dict)
     except Exception as e:
-        st.error(f"Error loading model weights: {e}")
+        st.error(f"Error loading model weights from Hugging Face: {e}")
         return None
 
     model.eval()
