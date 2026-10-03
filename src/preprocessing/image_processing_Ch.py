@@ -1,11 +1,10 @@
 import os
 import re
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 
-RAW_DIR = os.path.join("..","data_pr", "Raw")
+RAW_DIR = os.path.join("..", "data_pr", "Raw")
 PROCESSED_DIR = os.path.join("..","data_pr", "preprocessed")
 
 print("Setup complete")
@@ -36,7 +35,8 @@ for fname in sorted(os.listdir(ch_txt_dir)):
     if not fname.endswith(".txt"):
         continue
     image_id = fname.split(".")[0]
-    label = int(re.search(r"_(\d)\.txt$", fname).group(1))
+    label_match = re.search(r"_(\d)\.txt$", fname)
+    label = int(label_match.group(1)) if label_match else None  # Handle missing label
     
     with open(os.path.join(ch_txt_dir, fname), errors="ignore") as f:
         raw_text = f.read()
@@ -60,16 +60,23 @@ print(df['label'].value_counts())
 print(f"\nMissing sex:{df['sex'].isna().sum()}/ {len(df)}")
 print(f"Missing age:{df['age'].isna().sum()}/ {len(df)}")
 
-df['label'].value_counts().plot(kind='bar', title ='Class Distribution (0 = Normal, 1 = TB)')
-plt.show()
+# Optional visualization - remove if not needed
+try:
+    df['label'].value_counts().plot(kind='bar', title ='Class Distribution (0 = Normal, 1 = TB)')
+    plt.show()
+except Exception as e:
+    print(f"Visualization skipped: {e}")
 
-fig, axes = plt.subplots(2,3, figsize = (12,8))
+fig, axes = plt.subplots(2,3, figsize=(12,8))
 
 for i, ax in enumerate(axes.flat):
     row = df.iloc[i]
-    img = cv2.imread(row['filepath'], cv2.IMREAD_GRAYSCALE) # Read image in grayscale
-    ax.imshow(img, cmap='gray')
-    ax.set_title(f"Label: {row['label']} | Age: {row['age']} | Sex: {row['sex']}")
+    img = cv2.imread(row['filepath'], cv2.IMREAD_GRAYSCALE)  # Read image in grayscale
+    if img is not None:
+        ax.imshow(img, cmap='gray')
+        ax.set_title(f"Label: {row['label']} | Age: {row['age']} | Sex: {row['sex']}")
+    else:
+        ax.text(0.5, 0.5, 'Could not load image', ha='center', va='center', transform=ax.transAxes)
     ax.axis('off')
     
 output_path = os.path.join(PROCESSED_DIR, "ch_metadata.csv")
