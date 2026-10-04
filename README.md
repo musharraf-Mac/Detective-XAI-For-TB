@@ -19,6 +19,18 @@ This repository contains the implementation for our IT41043 group research proje
 
 ---
 
+## Model details
+|Model ID|Model name|Model function|
+|----------|----------|---------|
+| a | CXR Detection model | - |
+| b | CXR TB Detector | - |
+| c | Symptom TB detector | - |
+| d | Grad-cam XAI | - |
+| e | SHAP XAI | - |
+
+
+---
+
 ## Team
 
 | Name | Student ID | Github user name |
