@@ -5,6 +5,7 @@ import random
 # Derive absolute path to data folder relative to this script's location
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "../../data_pr/TB_Data"))
+OUTPUT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "../../data_pr/processed"))
 SPLITS = ["train", "test", "val"]
 CXR_CLASSES = ["normal", "TB", "abnormal"]
 OOD_CLASS = "unknown"
@@ -66,7 +67,8 @@ def create_model_a_csv(split):
     df = pd.DataFrame(records)
     
     # 4. Save
-    output_path = f"model_a_{split}.csv"
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    output_path = os.path.join(OUTPUT_DIR, f"model_a_{split}.csv")
     df.to_csv(output_path, index=False)
     
     print(f"\n✅ {output_path} created!")
