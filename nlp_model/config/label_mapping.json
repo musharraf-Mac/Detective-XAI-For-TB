@@ -1,0 +1,13 @@
+{
+  "id2label": {
+    "0": "Not TB",
+    "1": "TB"
+  },
+  "label2id": {
+    "Not TB": 0,
+    "TB": 1
+  },
+  "positive_class": "TB",
+  "target_column": "true_tb_status",
+  "note": "Label comes from the patient-level column; never from the 'burden' file name."
+}
