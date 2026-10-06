@@ -1,2 +1,4 @@
 .env
 data_pr
+models
+.vscode
