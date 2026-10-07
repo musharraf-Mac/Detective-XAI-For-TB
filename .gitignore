@@ -1,3 +1,5 @@
 .env
 data_pr
 models
+.vscode
+__pycache__
