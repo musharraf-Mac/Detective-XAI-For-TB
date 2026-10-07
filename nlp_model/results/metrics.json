@@ -1,0 +1,413 @@
+{
+  "validation_at_frozen_threshold": {
+    "threshold": 0.85,
+    "accuracy": 0.966,
+    "precision": 0.9302600472813238,
+    "sensitivity": 0.8933030646992054,
+    "specificity": 0.9836971539099199,
+    "f1": 0.9114070642733063,
+    "roc_auc": 0.9888940605123859,
+    "pr_auc": 0.9679575343668412,
+    "tn": 3560,
+    "fp": 59,
+    "fn": 94,
+    "tp": 787
+  },
+  "test_at_frozen_threshold": {
+    "threshold": 0.85,
+    "accuracy": 0.9655555555555555,
+    "precision": 0.9258823529411765,
+    "sensitivity": 0.8953356086461889,
+    "specificity": 0.9826014913007457,
+    "f1": 0.9103528050896472,
+    "roc_auc": 0.9929841378458801,
+    "pr_auc": 0.9753467795165792,
+    "tn": 3558,
+    "fp": 63,
+    "fn": 92,
+    "tp": 787
+  },
+  "test_95ci_bootstrap_by_patient_group": {
+    "accuracy": [
+      0.9597777777777777,
+      0.9708888888888889
+    ],
+    "precision": [
+      0.9073139607266143,
+      0.9432213209733488
+    ],
+    "sensitivity": [
+      0.8728997888645605,
+      0.9152235176926989
+    ],
+    "specificity": [
+      0.978236914600551,
+      0.9866525685723105
+    ],
+    "f1": [
+      0.8948617541272786,
+      0.9244186046511628
+    ],
+    "roc_auc": [
+      0.9910471779569429,
+      0.9947306367255884
+    ],
+    "pr_auc": [
+      0.9680126098305667,
+      0.9814629073312949
+    ]
+  },
+  "comparison_test": {
+    "TF-IDF + Logistic Regression": {
+      "Threshold": 0.7,
+      "Accuracy": 0.966,
+      "Precision": 0.9153,
+      "Sensitivity": 0.9101,
+      "Specificity": 0.9796,
+      "F1": 0.9127,
+      "ROC-AUC": 0.9926,
+      "PR-AUC": 0.9749
+    },
+    "Structured Logistic Regression": {
+      "Threshold": 0.55,
+      "Accuracy": 0.9631,
+      "Precision": 0.8749,
+      "Sensitivity": 0.9465,
+      "Specificity": 0.9671,
+      "F1": 0.9093,
+      "ROC-AUC": 0.9933,
+      "PR-AUC": 0.9767
+    },
+    "Structured Gradient Boosting": {
+      "Threshold": 0.65,
+      "Accuracy": 0.9662,
+      "Precision": 0.9025,
+      "Sensitivity": 0.9272,
+      "Specificity": 0.9757,
+      "F1": 0.9147,
+      "ROC-AUC": 0.9924,
+      "PR-AUC": 0.9744
+    },
+    "Transformer (Bio_ClinicalBERT)": {
+      "Threshold": 0.85,
+      "Accuracy": 0.9656,
+      "Precision": 0.9259,
+      "Sensitivity": 0.8953,
+      "Specificity": 0.9826,
+      "F1": 0.9104,
+      "ROC-AUC": 0.993,
+      "PR-AUC": 0.9753
+    }
+  },
+  "comparison_validation": {
+    "TF-IDF + Logistic Regression": {
+      "Threshold": 0.7,
+      "Accuracy": 0.9624,
+      "Precision": 0.9018,
+      "Sensitivity": 0.9069,
+      "Specificity": 0.976,
+      "F1": 0.9044,
+      "ROC-AUC": 0.9879,
+      "PR-AUC": 0.965
+    },
+    "Structured Logistic Regression": {
+      "Threshold": 0.55,
+      "Accuracy": 0.9631,
+      "Precision": 0.8799,
+      "Sensitivity": 0.9398,
+      "Specificity": 0.9688,
+      "F1": 0.9089,
+      "ROC-AUC": 0.9889,
+      "PR-AUC": 0.9678
+    },
+    "Structured Gradient Boosting": {
+      "Threshold": 0.65,
+      "Accuracy": 0.9629,
+      "Precision": 0.8949,
+      "Sensitivity": 0.9183,
+      "Specificity": 0.9737,
+      "F1": 0.9064,
+      "ROC-AUC": 0.9879,
+      "PR-AUC": 0.9657
+    },
+    "Transformer (Bio_ClinicalBERT)": {
+      "Threshold": 0.85,
+      "Accuracy": 0.966,
+      "Precision": 0.9303,
+      "Sensitivity": 0.8933,
+      "Specificity": 0.9837,
+      "F1": 0.9114,
+      "ROC-AUC": 0.9889,
+      "PR-AUC": 0.968
+    }
+  },
+  "validation_threshold_table": [
+    {
+      "threshold": 0.05,
+      "accuracy": 0.8664,
+      "precision": 0.597,
+      "sensitivity": 0.9784,
+      "specificity": 0.8392,
+      "f1": 0.7415,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3037,
+      "fp": 582,
+      "fn": 19,
+      "tp": 862
+    },
+    {
+      "threshold": 0.1,
+      "accuracy": 0.9111,
+      "precision": 0.6957,
+      "sensitivity": 0.9705,
+      "specificity": 0.8967,
+      "f1": 0.8104,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3245,
+      "fp": 374,
+      "fn": 26,
+      "tp": 855
+    },
+    {
+      "threshold": 0.15,
+      "accuracy": 0.9256,
+      "precision": 0.737,
+      "sensitivity": 0.9637,
+      "specificity": 0.9163,
+      "f1": 0.8352,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3316,
+      "fp": 303,
+      "fn": 32,
+      "tp": 849
+    },
+    {
+      "threshold": 0.2,
+      "accuracy": 0.9347,
+      "precision": 0.7651,
+      "sensitivity": 0.9614,
+      "specificity": 0.9282,
+      "f1": 0.8521,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3359,
+      "fp": 260,
+      "fn": 34,
+      "tp": 847
+    },
+    {
+      "threshold": 0.25,
+      "accuracy": 0.9416,
+      "precision": 0.791,
+      "sensitivity": 0.9535,
+      "specificity": 0.9387,
+      "f1": 0.8646,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3397,
+      "fp": 222,
+      "fn": 41,
+      "tp": 840
+    },
+    {
+      "threshold": 0.3,
+      "accuracy": 0.9476,
+      "precision": 0.814,
+      "sensitivity": 0.9489,
+      "specificity": 0.9472,
+      "f1": 0.8763,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3428,
+      "fp": 191,
+      "fn": 45,
+      "tp": 836
+    },
+    {
+      "threshold": 0.35,
+      "accuracy": 0.9522,
+      "precision": 0.8317,
+      "sensitivity": 0.9478,
+      "specificity": 0.9533,
+      "f1": 0.8859,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3450,
+      "fp": 169,
+      "fn": 46,
+      "tp": 835
+    },
+    {
+      "threshold": 0.4,
+      "accuracy": 0.956,
+      "precision": 0.8488,
+      "sensitivity": 0.9432,
+      "specificity": 0.9591,
+      "f1": 0.8935,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3471,
+      "fp": 148,
+      "fn": 50,
+      "tp": 831
+    },
+    {
+      "threshold": 0.45,
+      "accuracy": 0.9562,
+      "precision": 0.854,
+      "sensitivity": 0.9364,
+      "specificity": 0.961,
+      "f1": 0.8933,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3478,
+      "fp": 141,
+      "fn": 56,
+      "tp": 825
+    },
+    {
+      "threshold": 0.5,
+      "accuracy": 0.9573,
+      "precision": 0.8607,
+      "sensitivity": 0.933,
+      "specificity": 0.9632,
+      "f1": 0.8954,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3486,
+      "fp": 133,
+      "fn": 59,
+      "tp": 822
+    },
+    {
+      "threshold": 0.55,
+      "accuracy": 0.9587,
+      "precision": 0.8693,
+      "sensitivity": 0.9285,
+      "specificity": 0.966,
+      "f1": 0.8979,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3496,
+      "fp": 123,
+      "fn": 63,
+      "tp": 818
+    },
+    {
+      "threshold": 0.6,
+      "accuracy": 0.9607,
+      "precision": 0.8801,
+      "sensitivity": 0.9251,
+      "specificity": 0.9693,
+      "f1": 0.902,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3508,
+      "fp": 111,
+      "fn": 66,
+      "tp": 815
+    },
+    {
+      "threshold": 0.65,
+      "accuracy": 0.9613,
+      "precision": 0.888,
+      "sensitivity": 0.9183,
+      "specificity": 0.9718,
+      "f1": 0.9029,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3517,
+      "fp": 102,
+      "fn": 72,
+      "tp": 809
+    },
+    {
+      "threshold": 0.7,
+      "accuracy": 0.9616,
+      "precision": 0.8942,
+      "sensitivity": 0.9115,
+      "specificity": 0.9737,
+      "f1": 0.9028,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3524,
+      "fp": 95,
+      "fn": 78,
+      "tp": 803
+    },
+    {
+      "threshold": 0.75,
+      "accuracy": 0.9631,
+      "precision": 0.9058,
+      "sensitivity": 0.9058,
+      "specificity": 0.9771,
+      "f1": 0.9058,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3536,
+      "fp": 83,
+      "fn": 83,
+      "tp": 798
+    },
+    {
+      "threshold": 0.8,
+      "accuracy": 0.9642,
+      "precision": 0.9167,
+      "sensitivity": 0.899,
+      "specificity": 0.9801,
+      "f1": 0.9077,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3547,
+      "fp": 72,
+      "fn": 89,
+      "tp": 792
+    },
+    {
+      "threshold": 0.85,
+      "accuracy": 0.966,
+      "precision": 0.9303,
+      "sensitivity": 0.8933,
+      "specificity": 0.9837,
+      "f1": 0.9114,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3560,
+      "fp": 59,
+      "fn": 94,
+      "tp": 787
+    },
+    {
+      "threshold": 0.9,
+      "accuracy": 0.9644,
+      "precision": 0.9467,
+      "sensitivity": 0.8672,
+      "specificity": 0.9881,
+      "f1": 0.9052,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3576,
+      "fp": 43,
+      "fn": 117,
+      "tp": 764
+    },
+    {
+      "threshold": 0.95,
+      "accuracy": 0.9582,
+      "precision": 0.9651,
+      "sensitivity": 0.8161,
+      "specificity": 0.9928,
+      "f1": 0.8844,
+      "roc_auc": 0.9889,
+      "pr_auc": 0.968,
+      "tn": 3593,
+      "fp": 26,
+      "fn": 162,
+      "tp": 719
+    }
+  ],
+  "Important": "Research prototype."
+}
