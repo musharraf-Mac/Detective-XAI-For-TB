@@ -1,0 +1,7 @@
+{
+  "threshold": 0.85,
+  "rule": "best F1 among thresholds with validation sensitivity >= 0.87",
+  "chosen_on": "validation set only",
+  "sensitivity_target": 0.85,
+  "safety_margin": 0.02
+}

@@ -1,0 +1,60 @@
+{
+  "template_version": "v1",
+  "text_builder": "tb_utils.build_clinical_text",
+  "lowercase": false,
+  "stopwords_removed": false,
+  "model_name": "emilyalsentzer/Bio_ClinicalBERT",
+  "max_len": 64,
+  "id_col": "id",
+  "free_text_col": null,
+  "model_input_features": [
+    "age_years",
+    "sex",
+    "bmi",
+    "hiv_status",
+    "cough_2weeks",
+    "cough_duration_weeks",
+    "fever",
+    "night_sweats",
+    "weight_loss",
+    "hemoptysis",
+    "chest_pain",
+    "fatigue",
+    "loss_of_appetite"
+  ],
+  "removed_leakage_columns": [
+    "tb_type",
+    "tb_classification",
+    "treatment_outcome",
+    "rifampicin_resistant",
+    "smear_result",
+    "xpert_mtb_detected",
+    "xpert_rif_resistance",
+    "cxr_result",
+    "cxr_abnormal"
+  ],
+  "removed_derived_columns": [
+    "who_symptom_screen_count"
+  ],
+  "burden_used_as_feature": false,
+  "split": "70/15/15, stratified, grouped by patient id",
+  "seed": 42,
+  "class_weights_used": true,
+  "hyperparameters": {
+    "learning_rate": 2e-05,
+    "batch_size": 32,
+    "max_epochs": 8,
+    "patience": 2,
+    "weight_decay": 0.01,
+    "warmup_ratio": 0.1
+  },
+  "versions": {
+    "python": "3.13.15",
+    "numpy": "2.1.3",
+    "pandas": "2.2.3",
+    "torch": "2.11.0+cu130",
+    "transformers": "5.17.0",
+    "sklearn": "1.6.1",
+    "gpu": "Tesla T4"
+  }
+}
