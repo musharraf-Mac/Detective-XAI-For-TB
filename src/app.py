@@ -1,4 +1,9 @@
 import streamlit as st
+import sys
+import os
+# Add the project root to sys.path so that nlp_model and other root folders are discoverable
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
