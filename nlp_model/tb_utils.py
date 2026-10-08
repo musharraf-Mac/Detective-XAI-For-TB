@@ -1,7 +1,7 @@
 import re, unicodedata
 import pandas as pd
 
-TEMPLATE_VERSION = "v1"
+TEMPLATE_VERSION = "v2"
 
 SYMPTOM_PHRASES = {
     "fever": "fever",
@@ -13,6 +13,7 @@ SYMPTOM_PHRASES = {
     "loss_of_appetite": "loss of appetite",
 }
 
+
 def _missing(v):
     if v is None:
         return True
@@ -23,14 +24,16 @@ def _missing(v):
     except (TypeError, ValueError):
         return False
 
+
 def clean_text(s):
     """Light, safe cleaning. Keeps case and keeps negation words such as 'no', 'denies', 'without'."""
     if _missing(s):
         return ""
     s = unicodedata.normalize("NFKC", str(s))
-    s = re.sub(r"[\x00-\x1f\x7f]", " ", s)      # control characters
-    s = re.sub(r"\s+", " ", s).strip()           # repeated spaces / newlines
+    s = re.sub(r"[\x00-\x1f\x7f]", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
     return s
+
 
 def _flag(v):
     """Return True / False / None (unknown) from 1/0, yes/no, true/false ..."""
@@ -45,6 +48,7 @@ def _flag(v):
         return None
     return bool(v)
 
+
 def build_clinical_text(rec, free_text=None):
     """Turn one patient record (dict or pandas Series) into a short clinical sentence."""
     g = rec.get
@@ -53,7 +57,9 @@ def build_clinical_text(rec, free_text=None):
     sex = g("sex")
     sex_word = None
     if not _missing(sex):
-        sex_word = {"m": "male", "male": "male", "f": "female", "female": "female"}.get(str(sex).strip().lower())
+        sex_word = {"m": "male", "male": "male", "f": "female", "female": "female"}.get(
+            str(sex).strip().lower()
+        )
     age = g("age_years")
     try:
         age_i = int(round(float(age))) if not _missing(age) else None
@@ -73,7 +79,9 @@ def build_clinical_text(rec, free_text=None):
         parts.append("BMI not recorded.")
 
     hiv = _flag(g("hiv_status"))
-    parts.append("HIV positive." if hiv is True else "HIV negative." if hiv is False else "HIV status not recorded.")
+    parts.append(
+        "HIV positive." if hiv is True else "HIV negative." if hiv is False else "HIV status not recorded."
+    )
 
     dur, c2 = g("cough_duration_weeks"), _flag(g("cough_2weeks"))
     dur_val = None
@@ -93,14 +101,26 @@ def build_clinical_text(rec, free_text=None):
     else:
         parts.append("Cough not recorded.")
 
+    # ---- Symptoms grouped into present / absent / unknown ----
+    present_symptoms = []
+    absent_symptoms = []
+    unknown_symptoms = []
+
     for key, phrase in SYMPTOM_PHRASES.items():
         f = _flag(g(key))
         if f is True:
-            parts.append(f"Reports {phrase}.")
+            present_symptoms.append(phrase)
         elif f is False:
-            parts.append(f"Denies {phrase}.")
+            absent_symptoms.append(phrase)
         else:
-            parts.append(f"{phrase[0].upper() + phrase[1:]} not recorded.")
+            unknown_symptoms.append(phrase)
+
+    if present_symptoms:
+        parts.append(f"Presents with {', '.join(present_symptoms)}.")
+    if absent_symptoms:
+        parts.append(f"Denies {', '.join(absent_symptoms)}.")
+    if unknown_symptoms:
+        parts.append(f"{', '.join(unknown_symptoms)} not recorded.")
 
     ft = clean_text(free_text)
     if ft:
