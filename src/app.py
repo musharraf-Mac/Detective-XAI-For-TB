@@ -5,43 +5,43 @@ import torch.nn.functional as F
 import cv2
 import numpy as np
 import pandas as pd
+import shap
 from torchvision import models, transforms
 from pytorch_grad_cam import GradCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from safetensors.torch import load_file
 import json
 
-# Project-specific imports
+from xai.create_shap import ClinicalShapExplainer
+from xai.report_gen import generate_clinical_report
 from nlp_model.tb_utils import build_clinical_text
+
 
 # --- Configuration ---
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CLASS_NAMES_B = ["Normal", "TB", "Abnormal (not TB)"]
-# CLASS_NAMES_B = ["Normal", "TB Positive"]
-# DEFAULT_B_PATH = "models/baseline_densenet121_shenzhen.pth"
 DEFAULT_B_PATH = "models/best_model_b.pth"
 DEFAULT_A_PATH = "models/best_model_a.pth"
 NLP_MODEL_PATH = r"models\Sym_nlp.safetensors"
 TOKENIZER_PATH = "emilyalsentzer/Bio_ClinicalBERT"
 THRESHOLD_FILE = r"nlp_model\config\threshold.json"
 
-# --- Vision Model Architecture ---
+
+# --- Vision Model ---
 def build_densenet(num_classes):
     m = models.densenet121(weights=None)
     n = m.classifier.in_features
-    m.classifier = nn.Sequential( # type: ignore
+    m.classifier = nn.Sequential(
         nn.Linear(n, 512),
         nn.ReLU(),
         nn.Dropout(0.3),
         nn.Linear(512, num_classes)
     )
-    # m.classifier = nn.Linear(n, num_classes)
     return m
 
+
 class CAMWrapper(nn.Module):
-    """DenseNet forward with a non-inplace ReLU so Grad-CAM hooks work cleanly."""
     def __init__(self, base):
         super().__init__()
         self.features = base.features
@@ -52,7 +52,8 @@ class CAMWrapper(nn.Module):
         out = F.adaptive_avg_pool2d(out, (1, 1)).flatten(1)
         return self.classifier(out)
 
-# --- Cached Loaders ---
+
+# --- Loaders ---
 @st.cache_resource
 def load_vision_model(path, num_classes):
     m = build_densenet(num_classes)
@@ -62,6 +63,7 @@ def load_vision_model(path, num_classes):
         ckpt = torch.load(path, map_location="cpu", weights_only=False)
     m.load_state_dict(ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt)
     return CAMWrapper(m).to(DEVICE).eval()
+
 
 @st.cache_resource
 def load_nlp_model():
@@ -81,6 +83,7 @@ def load_nlp_model():
         st.error(f"Error loading NLP model: {e}")
         return None, None
 
+
 def get_nlp_threshold():
     try:
         with open(THRESHOLD_FILE, 'r') as f:
@@ -89,7 +92,8 @@ def get_nlp_threshold():
     except:
         return 0.85
 
-# --- Preprocessing & Inference ---
+
+# --- Preprocessing ---
 TF = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Resize((224, 224)),
@@ -97,14 +101,15 @@ TF = transforms.Compose([
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
 ])
 
+
 def read_gray(uploaded):
     data = np.frombuffer(uploaded.getvalue(), np.uint8)
     return cv2.imdecode(data, cv2.IMREAD_GRAYSCALE)
 
+
 def predict_vision(model, gray):
     img_rgb = np.stack([gray] * 3, axis=2)
     x = TF(img_rgb)
-    # Ensure x is a torch.Tensor to avoid Pylance NDArray error
     if not isinstance(x, torch.Tensor):
         x = torch.from_numpy(np.array(x))
     x = x.unsqueeze(0).to(DEVICE)
@@ -112,33 +117,56 @@ def predict_vision(model, gray):
         probs = torch.softmax(model(x), dim=1)[0].cpu().numpy()
     return x, probs
 
+
 def gradcam_overlay(model, x, gray, class_idx):
+    """Grad-CAM overlay — returns (overlay_image, heat_map)."""
     rgb = cv2.resize(gray, (224, 224)).astype(np.float32) / 255.0
     rgb = np.stack([rgb] * 3, axis=-1)
+    
     with GradCAM(model=model, target_layers=[model.features.norm5]) as cam:
-        heat = cam(input_tensor=x, targets=[ClassifierOutputTarget(class_idx)])[0] # type: ignore
-        heat = (heat - heat.min()) / (heat.max() - heat.min() + 1e-8)  # Normalize to [0, 1]
-        
-        heat_thresholded = np.where(heat > 0.5, heat, 0)  # Apply threshold
-        
-        colormap = cv2.applyColorMap(np.uint8(255 * heat_thresholded), cv2.COLORMAP_JET)  # create a color map  # type: ignore
-        colormap = cv2.cvtColor(colormap, cv2.COLOR_BGR2RGB) 
-        
-        # Blend with original
-    alpha = 0.4  # Transparency (0 = only original, 1 = only heatmap)
+        heat = cam(input_tensor=x, targets=[ClassifierOutputTarget(class_idx)])[0]
+        heat = (heat - heat.min()) / (heat.max() - heat.min() + 1e-8)
+        heat_thresholded = np.where(heat > 0.5, heat, 0)
+        colormap = cv2.applyColorMap(np.uint8(255 * heat_thresholded), cv2.COLORMAP_JET)
+        colormap = cv2.cvtColor(colormap, cv2.COLOR_BGR2RGB)
+    
+    alpha = 0.4
     overlay = (1 - alpha) * rgb + alpha * (colormap / 255.0)
-    overlay = np.clip(overlay, 0, 1)        
+    overlay = np.clip(overlay, 0, 1)
     
     return (overlay * 255).astype(np.uint8), heat
 
-# --- UI Layout ---
-st.set_page_config(page_title="Detective XAI: Multi-modal TB Detection", layout="wide")
 
+def analyze_heatmap(heat, gray):
+    """Extract region + concentration stats from heatmap."""
+    heat_norm = (heat - heat.min()) / (heat.max() - heat.min() + 1e-8)
+    binary = (heat_norm > 0.5).astype(np.uint8)
+    h, w = heat.shape
+    y_coords, x_coords = np.where(binary > 0)
+    
+    if len(y_coords) == 0:
+        return {"region": "No clear focus", "concentration": 0.0}
+    
+    center_y = np.mean(y_coords) / h
+    center_x = np.mean(x_coords) / w
+    
+    region_y = "upper" if center_y < 0.33 else ("middle" if center_y < 0.66 else "lower")
+    region_x = "right" if center_x < 0.33 else ("central" if center_x < 0.66 else "left")
+    
+    return {
+        "region": f"{region_y} {region_x} lung zone",
+        "concentration": float(np.sum(binary) / binary.size),
+        "hotspot_x": float(center_x),
+        "hotspot_y": float(center_y)
+    }
+
+
+# --- UI ---
+st.set_page_config(page_title="Detective XAI: Multi-modal TB Detection", layout="wide")
 st.title("🕵️ Detective XAI: Multi-modal TB Detection")
 st.markdown("Combining Chest X-ray Analysis and Clinical Symptom NLP for Tuberculosis Detection.")
 st.caption("Research prototype for testing only. Not a diagnostic tool.")
 
-# --- Sidebar Configuration ---
 with st.sidebar:
     st.header("⚙️ Settings")
     gate_thr = st.slider("Model A Gate Threshold", 0.5, 0.99, 0.90, 0.01)
@@ -146,9 +174,11 @@ with st.sidebar:
     st.divider()
     st.write(f"Compute Device: **{DEVICE}**")
 
-# Initialize session state
-if 'results' not in st.session_state:
-    st.session_state.results = None
+# Session state
+for key in ['results', 'clinical_text', 'symptoms', 'cough_dur']:
+    if key not in st.session_state:
+        st.session_state[key] = None
+
 
 # --- Input Section ---
 col_img, col_nlp = st.columns(2)
@@ -190,13 +220,14 @@ with col_nlp:
 
 st.divider()
 
+
 # --- Prediction Trigger ---
 if st.button("🚀 Predict Probability", use_container_width=True):
-    # Load Models
     with st.spinner("Loading models and analyzing..."):
         model_a = load_vision_model(DEFAULT_A_PATH, 2)
         model_b = load_vision_model(DEFAULT_B_PATH, 3)
         tokenizer, nlp_model = load_nlp_model()
+        
         if tokenizer is None or nlp_model is None:
             st.error("Failed to load NLP model.")
             st.stop()
@@ -207,26 +238,26 @@ if st.button("🚀 Predict Probability", use_container_width=True):
         # 1. Vision Pipeline
         if uploaded_file:
             gray = read_gray(uploaded_file)
-            # Gateway (Model A)
             _, gp = predict_vision(model_a, gray)
             p_cxr = float(gp[1])
 
             if p_cxr >= gate_thr:
-                # Model B
                 x, probs = predict_vision(model_b, gray)
                 idx = int(probs.argmax())
+                cam_image, cam_heat = gradcam_overlay(model_b, x, gray, idx)
                 vision_res = {
                     "status": "Success",
                     "class": CLASS_NAMES_B[idx],
-                    "conf": probs[idx],
+                    "conf": float(probs[idx]),
                     "probs": probs,
-                    "cam": gradcam_overlay(model_b, x, gray, idx),
+                    "cam": cam_image,
+                    "heat": cam_heat,
                     "image": gray
                 }
             else:
                 vision_res = {
                     "status": "Blocked",
-                    "message": f"Image rejected by gateway. P(Chest X-ray) = {p_cxr:.3f}. Please upload a valid X-ray."
+                    "message": "Please upload a valid chest X-ray."
                 }
 
         # 2. NLP Pipeline
@@ -250,27 +281,61 @@ if st.button("🚀 Predict Probability", use_container_width=True):
 
         nlp_res = {
             "text": clinical_text,
-            "prob": tb_prob,
+            "prob": float(tb_prob),
             "prediction": "TB Positive" if tb_prob >= nlp_thr else "Normal / Not TB"
         }
 
     st.session_state.results = {"vision": vision_res, "nlp": nlp_res}
+    st.session_state.clinical_text = clinical_text
+    st.session_state.symptoms = symptoms
+    st.session_state.cough_dur = cough_dur
+
 
 # --- Results Section ---
 if st.session_state.results:
     st.header("🎯 Diagnostic Results")
     res = st.session_state.results
 
-    # Vision Result Display
+    nlp_res = res["nlp"]
+
+    # --- Vision Result ---
     if res["vision"]:
         v = res["vision"]
         if v["status"] == "Success":
             c1, c2, c3 = st.columns([1, 1, 1])
             c1.image(v["image"], caption="Original X-ray", use_container_width=True)
-            c2.image(v["cam"][0], caption=f"Grad-CAM: {v['class']}", use_container_width=True)
+            c2.image(v["cam"], caption=f"Grad-CAM: {v['class']}", use_container_width=True)
             with c3:
                 st.metric("Vision Prediction", v["class"], f"{v['conf']*100:.1f}%")
                 st.bar_chart(pd.DataFrame({"probability": v["probs"]}, index=CLASS_NAMES_B))
+            
+            # --- Clinical Report (inside vision success block) ---
+            st.divider()
+            st.subheader("📋 Generated Clinical Report")
+            
+            heatmap_stats = analyze_heatmap(v["heat"], v["image"])
+            
+            active_symptoms = [k for k, val in st.session_state.symptoms.items() if val]
+            if st.session_state.cough_dur >= 2:
+                active_symptoms.append("cough_2weeks")
+            
+            report = generate_clinical_report(
+                vision_prediction=v["class"],
+                vision_confidence=v["conf"],
+                heatmap_stats=heatmap_stats,
+                active_symptoms=active_symptoms,
+                nlp_probability=nlp_res["prob"] if nlp_res else 0.0,
+                nlp_threshold=nlp_thr
+            )
+            
+            st.markdown(report)
+            
+            st.download_button(
+                label="📥 Download Report",
+                data=report,
+                file_name="tb_clinical_report.md",
+                mime="text/markdown"
+            )
         else:
             st.error(v["message"])
     else:
@@ -278,19 +343,40 @@ if st.session_state.results:
 
     st.divider()
 
-    # NLP Result Display
-    if res["nlp"]:
-        n = res["nlp"]
+    # --- NLP Result ---
+    if nlp_res:
         st.subheader("Clinical Symptom Analysis")
-        st.info(f"**Generated Clinical Sentence:**\n\n{n['text']}")
+        st.info(f"**Generated Clinical Sentence:**\n\n{nlp_res['text']}")
 
         col_m, col_p = st.columns([1, 2])
         with col_m:
-            color = "red" if "Positive" in n["prediction"] else "green"
-            st.markdown(f"### Prediction: <span style='color:{color}'>{n['prediction']}</span>", unsafe_allow_html=True)
-            st.metric("P(TB) Probability", f"{n['prob']:.4f}")
+            color = "red" if "Positive" in nlp_res["prediction"] else "green"
+            st.markdown(
+                f"### Prediction: <span style='color:{color}'>{nlp_res['prediction']}</span>",
+                unsafe_allow_html=True
+            )
+            st.metric("P(TB) Probability", f"{nlp_res['prob']:.4f}")
         with col_p:
             st.write("Probability Gauge")
-            st.progress(n["prob"])
-    else:
-        st.info("No clinical data provided for analysis.")
+            st.progress(nlp_res["prob"])
+        
+        # --- SHAP Explanation ---
+        tokenizer, nlp_model = load_nlp_model()
+        if nlp_model is not None and tokenizer is not None:
+            with st.spinner("Generating SHAP explanation..."):
+                if 'shap_explainer' not in st.session_state:
+                    st.session_state.shap_explainer = ClinicalShapExplainer(nlp_model, tokenizer)
+                
+                explainer = st.session_state.shap_explainer
+                shap_values = explainer.explain(st.session_state.clinical_text)
+                
+                st.markdown("### 🧬 SHAP Token-Level Explanation")
+                st.caption("🔴 Red = pushed toward TB | 🔵 Blue = pushed toward Normal")
+                
+                st.markdown(shap.plots.text(shap_values, display=False), unsafe_allow_html=True)
+                
+                top_symptoms = explainer.get_top_symptoms(shap_values, top_k=5)
+                st.markdown("**Top 5 Symptoms Driving Prediction:**")
+                for token, value in top_symptoms:
+                    direction = "🔴 TB" if value > 0 else "🔵 Normal"
+                    st.write(f"- `{token}`: {value:+.4f} ({direction})")
