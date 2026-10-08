@@ -6,6 +6,9 @@ IT41043 — Intelligent Systems | Horizon Campus | Academic Year 2026 | Third Ye
 
 ---
 
+## Live Link
+- https://detective-xai-for-tb.streamlit.app
+
 ## Project Overview
 
 This repository contains the implementation for our IT41043 group research project: a lightweight, multimodal, explainable AI framework for tuberculosis (TB) diagnosis. The system combines chest X-ray imaging with structured clinical data (symptoms, demographics, lab results) to improve diagnostic accuracy, while remaining efficient enough to run on low-spec hardware typical of resource-constrained healthcare settings.
@@ -62,8 +65,8 @@ This repository contains the implementation for our IT41043 group research proje
 ## Setup
 
 ```bash
-git clone https://github.com/[your-username]/tb-multimodal-xai.git
-cd tb-multimodal-xai
+git clone https://github.com/musharraf-Mac/Detective-XAI-For-TB.git
+cd Detective-XAI-For-TB
 pip install -r requirements.txt
 ```
 
