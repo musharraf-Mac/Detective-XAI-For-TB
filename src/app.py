@@ -12,12 +12,23 @@ from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from safetensors.torch import load_file
 import json
+from huggingface_hub import hf_hub_download
+import os
+from dotenv import load_dotenv
 
 from xai.create_shap import ClinicalShapExplainer
 from xai.report_gen import generate_clinical_report
 from nlp_model.tb_utils import build_clinical_text
 
-
+def get_secret(key, default=None):
+    """Reads secret from .env (os.getenv) if available, otherwise tries st.secrets."""
+    val = os.getenv(key)
+    if val is not None:
+        return val
+    try:
+        return st.secrets[key]
+    except Exception:
+        return default
 # --- Configuration ---
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CLASS_NAMES_B = ["Normal", "TB", "Abnormal (not TB)"]
@@ -27,12 +38,33 @@ NLP_MODEL_PATH = r"models\Sym_nlp.safetensors"
 TOKENIZER_PATH = "emilyalsentzer/Bio_ClinicalBERT"
 THRESHOLD_FILE = r"nlp_model\config\threshold.json"
 
+def get_model_path(filename, repo_id):
+    """Returns local path if exists, otherwise downloads from HF."""
+    local_path = os.path.join("models", filename)
+    
+    if os.path.exists(local_path):
+        print(f"📦 Loading models")
+        return local_path
+    print(f"📥 loading models")
+    try:
+        # Download from HF and save it into the 'models' folder
+        downloaded_path = hf_hub_download(
+            repo_id=repo_id,
+            filename=filename,
+            token=get_secret("HF_TOKEN"),
+            local_dir="models"
+        )
+        return downloaded_path
+    except Exception as e:
+        st.error(f"Failed to download {filename} from Hugging Face: {e}")
+        return None
+
 
 # --- Vision Model ---
 def build_densenet(num_classes):
     m = models.densenet121(weights=None)
     n = m.classifier.in_features
-    m.classifier = nn.Sequential(
+    m.classifier = nn.Sequential( # type: ignore
         nn.Linear(n, 512),
         nn.ReLU(),
         nn.Dropout(0.3),
@@ -55,18 +87,30 @@ class CAMWrapper(nn.Module):
 
 # --- Loaders ---
 @st.cache_resource
-def load_vision_model(path, num_classes):
+def load_vision_model(filename, num_classes):
+    # CONFIG: Update this to your actual HF repo ID
+    HF_REPO_ID = get_secret("REPOID")
+    
+    path = get_model_path(filename, HF_REPO_ID)
+    if path is None: return None
+
     m = build_densenet(num_classes)
     try:
         ckpt = torch.load(path, map_location="cpu")
     except Exception:
         ckpt = torch.load(path, map_location="cpu", weights_only=False)
+    
     m.load_state_dict(ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt)
     return CAMWrapper(m).to(DEVICE).eval()
 
-
 @st.cache_resource
 def load_nlp_model():
+    HF_REPO_ID = get_secret("REPOID")
+    
+    # 1. Handle the .safetensors file via helper
+    model_path = get_model_path("Sym_nlp.safetensors", HF_REPO_ID)
+    if model_path is None: return None, None
+
     try:
         tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
         model = AutoModelForSequenceClassification.from_pretrained(
@@ -75,7 +119,8 @@ def load_nlp_model():
             output_attentions=False,
             output_hidden_states=False
         )
-        state_dict = load_file(NLP_MODEL_PATH)
+        # Load weights from the resolved path (local or downloaded)
+        state_dict = load_file(model_path)
         model.load_state_dict(state_dict, strict=False)
         model.eval()
         return tokenizer, model
@@ -224,8 +269,8 @@ st.divider()
 # --- Prediction Trigger ---
 if st.button("🚀 Predict Probability", use_container_width=True):
     with st.spinner("Loading models and analyzing..."):
-        model_a = load_vision_model(DEFAULT_A_PATH, 2)
-        model_b = load_vision_model(DEFAULT_B_PATH, 3)
+        model_a = load_vision_model("best_model_a.pth", 2)
+        model_b = load_vision_model("best_model_b.pth", 3)
         tokenizer, nlp_model = load_nlp_model()
         
         if tokenizer is None or nlp_model is None:
