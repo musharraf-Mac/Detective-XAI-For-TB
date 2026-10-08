@@ -19,6 +19,8 @@ from nlp_model.tb_utils import build_clinical_text
 # --- Configuration ---
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CLASS_NAMES_B = ["Normal", "TB", "Abnormal (not TB)"]
+# CLASS_NAMES_B = ["Normal", "TB Positive"]
+# DEFAULT_B_PATH = "models/baseline_densenet121_shenzhen.pth"
 DEFAULT_B_PATH = "models/best_model_b.pth"
 DEFAULT_A_PATH = "models/best_model_a.pth"
 NLP_MODEL_PATH = r"models\Sym_nlp.safetensors"
@@ -35,6 +37,7 @@ def build_densenet(num_classes):
         nn.Dropout(0.3),
         nn.Linear(512, num_classes)
     )
+    # m.classifier = nn.Linear(n, num_classes)
     return m
 
 class CAMWrapper(nn.Module):
@@ -71,7 +74,7 @@ def load_nlp_model():
             output_hidden_states=False
         )
         state_dict = load_file(NLP_MODEL_PATH)
-        model.load_state_dict(state_dict)
+        model.load_state_dict(state_dict, strict=False)
         model.eval()
         return tokenizer, model
     except Exception as e:
@@ -113,9 +116,20 @@ def gradcam_overlay(model, x, gray, class_idx):
     rgb = cv2.resize(gray, (224, 224)).astype(np.float32) / 255.0
     rgb = np.stack([rgb] * 3, axis=-1)
     with GradCAM(model=model, target_layers=[model.features.norm5]) as cam:
-        # type: ignore
         heat = cam(input_tensor=x, targets=[ClassifierOutputTarget(class_idx)])[0] # type: ignore
-    return show_cam_on_image(rgb, heat, use_rgb=True)
+        heat = (heat - heat.min()) / (heat.max() - heat.min() + 1e-8)  # Normalize to [0, 1]
+        
+        heat_thresholded = np.where(heat > 0.5, heat, 0)  # Apply threshold
+        
+        colormap = cv2.applyColorMap(np.uint8(255 * heat_thresholded), cv2.COLORMAP_JET)  # create a color map  # type: ignore
+        colormap = cv2.cvtColor(colormap, cv2.COLOR_BGR2RGB) 
+        
+        # Blend with original
+    alpha = 0.4  # Transparency (0 = only original, 1 = only heatmap)
+    overlay = (1 - alpha) * rgb + alpha * (colormap / 255.0)
+    overlay = np.clip(overlay, 0, 1)        
+    
+    return (overlay * 255).astype(np.uint8), heat
 
 # --- UI Layout ---
 st.set_page_config(page_title="Detective XAI: Multi-modal TB Detection", layout="wide")
@@ -253,7 +267,7 @@ if st.session_state.results:
         if v["status"] == "Success":
             c1, c2, c3 = st.columns([1, 1, 1])
             c1.image(v["image"], caption="Original X-ray", use_container_width=True)
-            c2.image(v["cam"], caption=f"Grad-CAM: {v['class']}", use_container_width=True)
+            c2.image(v["cam"][0], caption=f"Grad-CAM: {v['class']}", use_container_width=True)
             with c3:
                 st.metric("Vision Prediction", v["class"], f"{v['conf']*100:.1f}%")
                 st.bar_chart(pd.DataFrame({"probability": v["probs"]}, index=CLASS_NAMES_B))
