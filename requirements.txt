@@ -13,7 +13,7 @@ safetensors
 sentencepiece
 
 # XAI
-pytorch-grad-cam
+grad-cam
 shap
 
 # Others
